@@ -9,4 +9,6 @@ SELECT
 FROM
 	ZSFNOTE
 `
+
+	QueryANote = QueryAllNotes + `WHERE ZUNIQUEIDENTIFIER = ?`
 )

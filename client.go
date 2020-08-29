@@ -63,3 +63,18 @@ func (r *Client) AllNotes(ctx context.Context) ([]Note, error) {
 
 	return notes, nil
 }
+
+func (r *Client) GetNoteByID(ctx context.Context, id string) (Note, error) {
+	row := r.db.QueryRowContext(ctx, QueryANote, id)
+
+	var n Note
+	if err := row.Scan(&n.ID, &n.Title, &n.Subtitle, &n.Archived, &n.Trashed, &n.PermanentlyDeleted); err != nil {
+		return Note{}, fmt.Errorf("scan: %w", err)
+	}
+
+	if err := row.Err(); err != nil {
+		return Note{}, fmt.Errorf("row err: %w", err)
+	}
+
+	return n, nil
+}
