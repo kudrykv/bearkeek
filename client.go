@@ -21,7 +21,7 @@ func NewDefault() (Bear, error) {
 }
 
 func New(path string) (Bear, error) {
-	db, err := open(path)
+	db, err := opendb(path)
 	if err != nil {
 		return Bear{}, fmt.Errorf("open db: %w", err)
 	}
@@ -30,10 +30,17 @@ func New(path string) (Bear, error) {
 }
 
 type NotesQuery struct {
+	OrderByColumns []OrderByColumn
+	Limit          int
+}
+
+type OrderByColumn struct {
+	Name string
+	Desc bool
 }
 
 func (b Bear) Notes(ctx context.Context, q NotesQuery) ([]Note, error) {
-	notes, err := b.db.Notes(ctx, q)
+	notes, err := b.db.notes(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("notes: %w", err)
 	}
