@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -40,57 +41,125 @@ func (r dbclient) notes(ctx context.Context, q NotesQuery) ([]Note, error) {
 
 	prep := r.db.WithContext(ctx).Preload("Tags")
 
-	if len(q.OrderByColumns) > 0 {
-		for _, column := range q.OrderByColumns {
-			prep = prep.Order(clause.OrderByColumn{
-				Column: clause.Column{Name: column.Name},
-				Desc:   column.Desc,
-			})
-		}
-	}
+	prep = notesOrder(prep, q)
+	prep = notesLimit(prep, q)
 
-	if q.Limit > 0 {
-		prep = prep.Limit(q.Limit)
+	var err error
+	if prep, err = notesTags(r.db, prep, q); err != nil {
+		return nil, fmt.Errorf("notes tags: %w", err)
 	}
-
-	//var noteIDs []int64
-	//if len(q.Tags) > 0 {
-	//	tx := r.db.
-	//		Table("Z_7TAGS").
-	//		Joins("JOIN ZSFNOTETAG n ON n.Z_PK = Z_7TAGS.Z_14TAGS").
-	//		Select("Z_7TAGS.Z_7NOTES")
-	//
-	//	match := make([]string, 0, len(q.Tags))
-	//	unmatch := make([]string, 0, len(q.Tags))
-	//
-	//	for _, tag := range q.Tags {
-	//		if tag.Exclude {
-	//			unmatch = append(unmatch, tag.Name)
-	//		} else {
-	//			match = append(match, tag.Name)
-	//		}
-	//	}
-	//
-	//	if len(match) > 0 {
-	//		tx.Where("ZTITLE IN (?)", match)
-	//	}
-	//
-	//	if len(unmatch) > 0 {
-	//		tx.Where("ZTITLE NOT IN (?)", unmatch)
-	//	}
-	//
-	//	tx = tx.Order("Z_7TAGS.Z_7NOTES ASC")
-	//
-	//	if tx.Find(&noteIDs); tx.Error != nil {
-	//		return nil, fmt.Errorf("note filter by tag: %w", tx.Error)
-	//	}
-	//}
 
 	if res := prep.Find(&notes); res.Error != nil {
 		return nil, fmt.Errorf("notes select: %w", res.Error)
 	}
 
 	return notes, nil
+}
+
+func notesTags(db *gorm.DB, prep *gorm.DB, q NotesQuery) (*gorm.DB, error) {
+	if len(q.Tags) == 0 {
+		return prep, nil
+	}
+
+	var nat []struct {
+		ID   int64  `gorm:"column:id"`
+		Tags string `gorm:"column:tags"`
+	}
+
+	res := db.Table("ZSFNOTETAG").
+		Joins("JOIN `Z_7TAGS` ON `Z_7TAGS`.`Z_14TAGS` = `ZSFNOTETAG`.`Z_PK`").
+		Select("Z_7NOTES as id, group_concat(utf8lower(ZTITLE), '###') as tags").
+		Group("Z_7NOTES").Find(&nat)
+	if res.Error != nil {
+		return nil, fmt.Errorf("tags for notes: %w", res.Error)
+	}
+
+	include := make([]string, 0, len(q.Tags))
+	exclude := make([]string, 0, len(q.Tags))
+
+	for _, tag := range q.Tags {
+		if tag.Exclude {
+			exclude = append(exclude, tag.Name)
+		} else {
+			include = append(include, tag.Name)
+		}
+	}
+
+	var noteIDs []int64
+
+	for _, nn := range nat {
+		tl := taglist(strings.Split(nn.Tags, "###"))
+		if tl.excludeAll(exclude) && tl.includeAll(include) {
+			noteIDs = append(noteIDs, nn.ID)
+		}
+	}
+
+	return prep.Where("Z_PK IN (?)", noteIDs), nil
+}
+
+type taglist []string
+
+func (t taglist) includeAll(in []string) bool {
+	for _, left := range in {
+		hit := false
+
+		for _, right := range t {
+			if left == right {
+				hit = true
+
+				break
+			}
+		}
+
+		if !hit {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t taglist) excludeAll(in []string) bool {
+	for _, left := range in {
+		hit := false
+
+		for _, right := range t {
+			if left == right {
+				hit = true
+
+				break
+			}
+		}
+
+		if hit {
+			return false
+		}
+	}
+
+	return true
+}
+
+func notesOrder(prep *gorm.DB, q NotesQuery) *gorm.DB {
+	if len(q.OrderByColumns) == 0 {
+		return prep
+	}
+
+	for _, column := range q.OrderByColumns {
+		prep = prep.Order(clause.OrderByColumn{
+			Column: clause.Column{Name: column.Name},
+			Desc:   column.Desc,
+		})
+	}
+
+	return prep
+}
+
+func notesLimit(prep *gorm.DB, q NotesQuery) *gorm.DB {
+	if q.Limit <= 0 {
+		return prep
+	}
+
+	return prep.Limit(q.Limit)
 }
 
 func (r dbclient) note(ctx context.Context, id string) (Note, error) {
