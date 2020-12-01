@@ -35,7 +35,7 @@ func opendb(path string) (*gorm.DB, error) {
 	return db, nil
 }
 
-func (r dbclient) notes(ctx context.Context, q NotesQuery) ([]Note, error) {
+func (r dbclient) Notes(ctx context.Context, q NotesQuery) ([]Note, error) {
 	var notes []Note
 
 	prep := r.db.WithContext(ctx).Preload("Tags")
@@ -46,8 +46,8 @@ func (r dbclient) notes(ctx context.Context, q NotesQuery) ([]Note, error) {
 	}
 
 	prep = r.notesWhereTerms(prep, q)
-	prep = notesOrder(prep, q)
-	prep = notesLimit(prep, q)
+	prep = r.notesOrder(prep, q)
+	prep = r.notesLimit(prep, q)
 
 	if res := prep.Find(&notes); res.Error != nil {
 		return nil, fmt.Errorf("notes select: %w", res.Error)
@@ -121,7 +121,7 @@ func notesTags(db *gorm.DB, prep *gorm.DB, q NotesQuery) (*gorm.DB, error) {
 	return prep.Where("Z_PK IN (?)", noteIDs), nil
 }
 
-func notesOrder(prep *gorm.DB, q NotesQuery) *gorm.DB {
+func (r dbclient) notesOrder(prep *gorm.DB, q NotesQuery) *gorm.DB {
 	if len(q.OrderByColumns) == 0 {
 		return prep
 	}
@@ -141,7 +141,7 @@ func notesOrder(prep *gorm.DB, q NotesQuery) *gorm.DB {
 	return prep
 }
 
-func notesLimit(prep *gorm.DB, q NotesQuery) *gorm.DB {
+func (r dbclient) notesLimit(prep *gorm.DB, q NotesQuery) *gorm.DB {
 	if q.Limit <= 0 {
 		return prep
 	}
@@ -149,7 +149,7 @@ func notesLimit(prep *gorm.DB, q NotesQuery) *gorm.DB {
 	return prep.Limit(q.Limit)
 }
 
-func (r dbclient) note(ctx context.Context, id string) (Note, error) {
+func (r dbclient) Note(ctx context.Context, id string) (Note, error) {
 	var note Note
 
 	res := r.db.WithContext(ctx).First(&note, "ZUNIQUEIDENTIFIER = ?", id)

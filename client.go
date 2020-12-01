@@ -47,7 +47,7 @@ type MatchingTag struct {
 }
 
 func (b Bear) Notes(ctx context.Context, q NotesQuery) ([]Note, error) {
-	notes, err := b.db.notes(ctx, q)
+	notes, err := b.db.Notes(ctx, q)
 	if err != nil {
 		return nil, fmt.Errorf("notes: %w", err)
 	}
@@ -56,7 +56,7 @@ func (b Bear) Notes(ctx context.Context, q NotesQuery) ([]Note, error) {
 }
 
 func (b Bear) Note(ctx context.Context, id string) (Note, error) {
-	note, err := b.db.note(ctx, id)
+	note, err := b.db.Note(ctx, id)
 	if err != nil {
 		return Note{}, fmt.Errorf("note: %w", err)
 	}
