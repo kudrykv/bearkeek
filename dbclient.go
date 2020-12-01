@@ -38,7 +38,7 @@ func opendb(path string) (*gorm.DB, error) {
 func (r dbclient) notes(ctx context.Context, q NotesQuery) ([]Note, error) {
 	var notes []Note
 
-	prep := r.db.WithContext(ctx)
+	prep := r.db.WithContext(ctx).Preload("Tags")
 
 	if len(q.OrderByColumns) > 0 {
 		for _, column := range q.OrderByColumns {
@@ -53,7 +53,40 @@ func (r dbclient) notes(ctx context.Context, q NotesQuery) ([]Note, error) {
 		prep = prep.Limit(q.Limit)
 	}
 
-	if res := prep.Preload("Tags").Find(&notes); res.Error != nil {
+	//var noteIDs []int64
+	//if len(q.Tags) > 0 {
+	//	tx := r.db.
+	//		Table("Z_7TAGS").
+	//		Joins("JOIN ZSFNOTETAG n ON n.Z_PK = Z_7TAGS.Z_14TAGS").
+	//		Select("Z_7TAGS.Z_7NOTES")
+	//
+	//	match := make([]string, 0, len(q.Tags))
+	//	unmatch := make([]string, 0, len(q.Tags))
+	//
+	//	for _, tag := range q.Tags {
+	//		if tag.Exclude {
+	//			unmatch = append(unmatch, tag.Name)
+	//		} else {
+	//			match = append(match, tag.Name)
+	//		}
+	//	}
+	//
+	//	if len(match) > 0 {
+	//		tx.Where("ZTITLE IN (?)", match)
+	//	}
+	//
+	//	if len(unmatch) > 0 {
+	//		tx.Where("ZTITLE NOT IN (?)", unmatch)
+	//	}
+	//
+	//	tx = tx.Order("Z_7TAGS.Z_7NOTES ASC")
+	//
+	//	if tx.Find(&noteIDs); tx.Error != nil {
+	//		return nil, fmt.Errorf("note filter by tag: %w", tx.Error)
+	//	}
+	//}
+
+	if res := prep.Find(&notes); res.Error != nil {
 		return nil, fmt.Errorf("notes select: %w", res.Error)
 	}
 

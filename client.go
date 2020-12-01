@@ -31,12 +31,18 @@ func New(path string) (Bear, error) {
 
 type NotesQuery struct {
 	OrderByColumns []OrderByColumn
+	Tags           []MatchingTag
 	Limit          int
 }
 
 type OrderByColumn struct {
 	Name string
 	Desc bool
+}
+
+type MatchingTag struct {
+	Name    string
+	Exclude bool
 }
 
 func (b Bear) Notes(ctx context.Context, q NotesQuery) ([]Note, error) {
