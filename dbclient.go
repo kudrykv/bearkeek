@@ -9,7 +9,6 @@ import (
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/clause"
 	"gorm.io/gorm/logger"
 )
 
@@ -41,19 +40,44 @@ func (r dbclient) notes(ctx context.Context, q NotesQuery) ([]Note, error) {
 
 	prep := r.db.WithContext(ctx).Preload("Tags")
 
-	prep = notesOrder(prep, q)
-	prep = notesLimit(prep, q)
-
 	var err error
 	if prep, err = notesTags(r.db, prep, q); err != nil {
 		return nil, fmt.Errorf("notes tags: %w", err)
 	}
+
+	prep = r.notesWhereTerms(prep, q)
+	prep = notesOrder(prep, q)
+	prep = notesLimit(prep, q)
 
 	if res := prep.Find(&notes); res.Error != nil {
 		return nil, fmt.Errorf("notes select: %w", res.Error)
 	}
 
 	return notes, nil
+}
+
+func (r dbclient) notesWhereTerms(prep *gorm.DB, q NotesQuery) *gorm.DB {
+	if len(q.Terms) == 0 {
+		prep.Select("ZSFNOTE.*, 0 as titlehit")
+
+		return prep
+	}
+
+	where := r.db.Where("utf8lower(ZTEXT) like utf8lower(?)", "%"+q.Terms[0]+"%")
+	slect := []string{"ZSFNOTE.*, utf8lower(ZTITLE) like utf8lower(?)"}
+	params := []interface{}{"%" + q.Terms[0] + "%"}
+
+	for i := 1; i < len(q.Terms); i++ {
+		where = where.Or("utf8lower(ZTEXT) like utf8lower(?)", "%"+q.Terms[i]+"%")
+
+		slect = append(slect, "utf8lower(ZTITLE) like utf8lower(?)")
+		params = append(params, "%"+q.Terms[i]+"%")
+	}
+
+	prep = prep.Select(strings.Join(slect, " OR ")+" as titlehit", params...).
+		Order("titlehit desc")
+
+	return prep.Where(where)
 }
 
 func notesTags(db *gorm.DB, prep *gorm.DB, q NotesQuery) (*gorm.DB, error) {
@@ -89,7 +113,7 @@ func notesTags(db *gorm.DB, prep *gorm.DB, q NotesQuery) (*gorm.DB, error) {
 
 	for _, nn := range nat {
 		tl := taglist(strings.Split(nn.Tags, "###"))
-		if tl.excludeAll(exclude) && tl.includeAll(include) {
+		if tl.exact(exclude, true) && tl.exact(include, false) {
 			noteIDs = append(noteIDs, nn.ID)
 		}
 	}
@@ -97,58 +121,21 @@ func notesTags(db *gorm.DB, prep *gorm.DB, q NotesQuery) (*gorm.DB, error) {
 	return prep.Where("Z_PK IN (?)", noteIDs), nil
 }
 
-type taglist []string
-
-func (t taglist) includeAll(in []string) bool {
-	for _, left := range in {
-		hit := false
-
-		for _, right := range t {
-			if left == right {
-				hit = true
-
-				break
-			}
-		}
-
-		if !hit {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (t taglist) excludeAll(in []string) bool {
-	for _, left := range in {
-		hit := false
-
-		for _, right := range t {
-			if left == right {
-				hit = true
-
-				break
-			}
-		}
-
-		if hit {
-			return false
-		}
-	}
-
-	return true
-}
-
 func notesOrder(prep *gorm.DB, q NotesQuery) *gorm.DB {
 	if len(q.OrderByColumns) == 0 {
 		return prep
 	}
 
+	var order string
+
 	for _, column := range q.OrderByColumns {
-		prep = prep.Order(clause.OrderByColumn{
-			Column: clause.Column{Name: column.Name},
-			Desc:   column.Desc,
-		})
+		if column.Desc {
+			order = "desc"
+		} else {
+			order = "asc"
+		}
+
+		prep = prep.Order(column.Name + " " + order)
 	}
 
 	return prep
