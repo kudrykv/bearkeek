@@ -30,15 +30,9 @@ func New(path string) (Bear, error) {
 }
 
 type NotesQuery struct {
-	OrderByColumns []OrderByColumn
-	Tags           []MatchingTag
-	Terms          []string
-	Limit          int
-}
-
-type OrderByColumn struct {
-	Name string
-	Desc bool
+	Tags  []MatchingTag
+	Terms []string
+	Limit int
 }
 
 type MatchingTag struct {

@@ -46,10 +46,10 @@ func (r dbclient) Notes(ctx context.Context, q NotesQuery) ([]Note, error) {
 	}
 
 	prep = r.notesWhereTerms(prep, q)
-	prep = r.notesOrder(prep, q)
 	prep = r.notesLimit(prep, q)
 
-	if res := prep.Find(&notes); res.Error != nil {
+	res := prep.Order("ZCREATIONDATE desc").Find(&notes)
+	if res.Error != nil {
 		return nil, fmt.Errorf("notes select: %w", res.Error)
 	}
 
@@ -119,26 +119,6 @@ func notesTags(db *gorm.DB, prep *gorm.DB, q NotesQuery) (*gorm.DB, error) {
 	}
 
 	return prep.Where("Z_PK IN (?)", noteIDs), nil
-}
-
-func (r dbclient) notesOrder(prep *gorm.DB, q NotesQuery) *gorm.DB {
-	if len(q.OrderByColumns) == 0 {
-		return prep
-	}
-
-	var order string
-
-	for _, column := range q.OrderByColumns {
-		if column.Desc {
-			order = "desc"
-		} else {
-			order = "asc"
-		}
-
-		prep = prep.Order(column.Name + " " + order)
-	}
-
-	return prep
 }
 
 func (r dbclient) notesLimit(prep *gorm.DB, q NotesQuery) *gorm.DB {
