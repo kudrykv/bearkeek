@@ -144,3 +144,14 @@ func (r dbclient) Note(ctx context.Context, id string) (Note, error) {
 
 	return note, nil
 }
+
+func (r dbclient) Tags(ctx context.Context, q TagsQuery) ([]Tag, error) {
+	var tags []Tag
+
+	res := r.db.WithContext(ctx).Where("ZTITLE like ?", "%"+q.Term+"%").Find(&tags)
+	if res.Error != nil {
+		return nil, fmt.Errorf("find: %w", res.Error)
+	}
+
+	return tags, nil
+}

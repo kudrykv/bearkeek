@@ -58,6 +58,19 @@ func (b Bear) Note(ctx context.Context, id string) (Note, error) {
 	return note, nil
 }
 
+type TagsQuery struct {
+	Term string
+}
+
+func (b Bear) Tags(ctx context.Context, q TagsQuery) ([]Tag, error) {
+	tags, err := b.db.Tags(ctx, q)
+	if err != nil {
+		return nil, fmt.Errorf("tags: %w", err)
+	}
+
+	return tags, nil
+}
+
 func defaultPath() (string, error) {
 	dir, err := os.UserHomeDir()
 	if err != nil {
