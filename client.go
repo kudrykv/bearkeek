@@ -12,7 +12,7 @@ type Bear struct {
 }
 
 func NewDefault() (Bear, error) {
-	path, err := defaultPath()
+	path, err := compileDefaultPath()
 	if err != nil {
 		return Bear{}, fmt.Errorf("default path: %w", err)
 	}
@@ -71,11 +71,13 @@ func (b Bear) Tags(ctx context.Context, q TagsQuery) ([]Tag, error) {
 	return tags, nil
 }
 
-func defaultPath() (string, error) {
+const defaultPath = "~/Library/Group Containers/9K33E3U3T4.net.shinyfrog.bear/Application Data/database.sqlite"
+
+func compileDefaultPath() (string, error) {
 	dir, err := os.UserHomeDir()
 	if err != nil {
 		return "", fmt.Errorf("user home dir: %w", err)
 	}
 
-	return strings.Replace(DefaultPath, "~", dir, 1), nil
+	return strings.Replace(defaultPath, "~", dir, 1), nil
 }

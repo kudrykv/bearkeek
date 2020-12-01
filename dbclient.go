@@ -48,7 +48,11 @@ func (r dbclient) Notes(ctx context.Context, q NotesQuery) ([]Note, error) {
 	prep = r.notesWhereTerms(prep, q)
 	prep = r.notesLimit(prep, q)
 
-	res := prep.Order("ZCREATIONDATE desc").Find(&notes)
+	res := prep.
+		Where("ZARCHIVED = 0").Where("ZTRASHED = 0").
+		Order("ZCREATIONDATE desc").
+		Find(&notes)
+
 	if res.Error != nil {
 		return nil, fmt.Errorf("notes select: %w", res.Error)
 	}
