@@ -7,7 +7,7 @@ import (
 
 var (
 	compTagRegex = regexp.MustCompile(`-?#[^\s][^#]+[^\s-]#`)
-	tagRegex     = regexp.MustCompile(`-?#\w+`)
+	tagRegex     = regexp.MustCompile(`-?#[\w/]+`)
 	splitRegex   = regexp.MustCompile(`\s+`)
 )
 
@@ -16,6 +16,7 @@ type ParseResult struct {
 	Terms     []string
 	IsTagLast bool
 	LastTag   string
+	RawButTag string
 }
 
 func Parse(s string) ParseResult {
@@ -26,6 +27,7 @@ func Parse(s string) ParseResult {
 
 	if res.IsTagLast {
 		res.LastTag = s[hashIndex+1:]
+		res.RawButTag = s[:hashIndex]
 	}
 
 	compTags := compTagRegex.FindAllString(s, -1)
@@ -36,9 +38,12 @@ func Parse(s string) ParseResult {
 
 	savetags := make([]MatchingTag, 0, len(compTags)+len(tags))
 
-	var exclude bool
-	var shift int
-	var cut int
+	var (
+		exclude bool
+		shift   int
+		cut     int
+	)
+
 	for _, tag := range append(tags, compTags...) {
 		shift = 1
 		cut = len(tag)

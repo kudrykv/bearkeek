@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/kudrykv/bearkeek"
+	"github.com/kudrykv/bearkeek/alfred"
 )
 
 func main() {
@@ -18,6 +19,8 @@ func main() {
 
 	flag.Parse()
 
+	a := alfred.New()
+
 	search := ""
 	if len(flag.Args()) > 0 {
 		search = flag.Args()[len(flag.Args())-1]
@@ -25,21 +28,42 @@ func main() {
 
 	parse := bearkeek.Parse(search)
 
-	fmt.Println(parse)
-
 	if parse.IsTagLast {
 		tags, err := bear.Tags(context.Background(), bearkeek.TagsQuery{Term: parse.LastTag})
 		if err != nil {
 			fmt.Println(err)
 		}
 
-		fmt.Println(tags)
+		for _, tag := range tags {
+			tagname := "#" + tag.Name
+			item := alfred.
+				NewItem(tagname, "").
+				Opts(
+					alfred.Autocomplete(parse.RawButTag+tagname+" "),
+					alfred.IsValid(false),
+				)
+			a.AddItem(item)
+		}
+
+		fmt.Println(string(a.MustJSON()))
 
 		return
 	}
 
-	bear.Notes(context.Background(), bearkeek.NotesQuery{
+	notes, err := bear.Notes(context.Background(), bearkeek.NotesQuery{
 		Tags:  parse.Tags,
 		Terms: parse.Terms,
+		Limit: 100,
 	})
+	if err != nil {
+		fmt.Println(err)
+
+		return
+	}
+
+	for _, note := range notes {
+		a.AddItem(alfred.NewItem(note.Title, note.Subtitle))
+	}
+
+	fmt.Println(string(a.MustJSON()))
 }

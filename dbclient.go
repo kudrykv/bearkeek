@@ -3,13 +3,10 @@ package bearkeek
 import (
 	"context"
 	"fmt"
-	"log"
-	"os"
 	"strings"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 type dbclient struct {
@@ -20,14 +17,7 @@ func opendb(path string) (*gorm.DB, error) {
 	dialector := sqlite.Open(path).(*sqlite.Dialector)
 	dialector.DriverName = "sqlite_custom"
 
-	db, err := gorm.Open(dialector, &gorm.Config{
-		Logger: logger.New(log.New(os.Stdout, "\r\n", log.LstdFlags), logger.Config{
-			SlowThreshold: 0,
-			Colorful:      true,
-			LogLevel:      logger.Info,
-		}),
-		NamingStrategy: ns{},
-	})
+	db, err := gorm.Open(dialector, &gorm.Config{NamingStrategy: ns{}})
 	if err != nil {
 		return nil, fmt.Errorf("open: %w", err)
 	}
