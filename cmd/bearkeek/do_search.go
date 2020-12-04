@@ -30,7 +30,7 @@ func listNotes(bear bearkeek.Bear, a *alfred.Alfred, parse bearkeek.ParseResult,
 	}
 
 	for _, note := range notes {
-		a.AddItem(alfred.NewItem(note.Title, note.Subtitle).Opts(alfred.Arg(getArg(note, search))))
+		a.AddItem(alfred.NewItem(note.Title, note.Subtitle).Opts(alfred.Arg(getValues("open", note, search))))
 	}
 
 	if len(notes) == 0 {
@@ -65,9 +65,10 @@ func listTags(bear bearkeek.Bear, a *alfred.Alfred, parse bearkeek.ParseResult) 
 	fmt.Println(string(a.MustJSON()))
 }
 
-func getArg(n bearkeek.Note, st string) string {
+func getValues(action string, n bearkeek.Note, st string) string {
 	return url.Values{
-		"id":   {n.UUID},
-		"term": {st},
+		"action": {action},
+		"id":     {n.UUID},
+		"term":   {st},
 	}.Encode()
 }
