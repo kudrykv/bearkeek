@@ -42,7 +42,10 @@ type Item struct {
 }
 
 func NewItem(title, subtitle string) Item {
-	return Item{Title: title, Subtitle: subtitle}
+	return Item{
+		Title:    title,
+		Subtitle: subtitle,
+	}
 }
 
 type Option func(Item) Item
@@ -63,7 +66,21 @@ func Autocomplete(autocomplete string) Option {
 	}
 }
 
-func IsValid(flag bool) Option {
+func Arg(arg string) Option {
+	return func(item Item) Item {
+		item.Arg = arg
+		return item
+	}
+}
+
+func UID(uid string) Option {
+	return func(item Item) Item {
+		item.UID = uid
+		return item
+	}
+}
+
+func Valid(flag bool) Option {
 	return func(item Item) Item {
 		ptr := &flag
 		item.Valid = ptr

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"context"
+	"errors"
 	"flag"
 	"fmt"
 
@@ -9,11 +9,27 @@ import (
 	"github.com/kudrykv/bearkeek/alfred"
 )
 
+const (
+	modeSearch = "search"
+	limit400   = 400
+)
+
+// nolint:gochecknoglobals
+var (
+	mode  string
+	limit = 400
+
+	errUnknownMode = errors.New("unknown mode")
+)
+
+func init() { // nolint:gochecknoinits
+	flag.StringVar(&mode, "mode", modeSearch, "search")
+	flag.IntVar(&limit, "limit", limit400, "<num>")
+}
+
 func main() {
 	bear, err := bearkeek.NewDefault()
-	if err != nil {
-		fmt.Println(err)
-
+	if erroredToAlfred(err) {
 		return
 	}
 
@@ -21,49 +37,29 @@ func main() {
 
 	a := alfred.New()
 
-	search := ""
+	switch mode {
+	case modeSearch:
+		doSearch(bear, a)
+	default:
+		erroredToAlfred(errUnknownMode)
+	}
+}
+
+func getSearchTerm() string {
 	if len(flag.Args()) > 0 {
-		search = flag.Args()[len(flag.Args())-1]
+		return flag.Args()[len(flag.Args())-1]
 	}
 
-	parse := bearkeek.Parse(search)
+	return ""
+}
 
-	if parse.IsTagLast {
-		tags, err := bear.Tags(context.Background(), bearkeek.TagsQuery{Term: parse.LastTag})
-		if err != nil {
-			fmt.Println(err)
-		}
-
-		for _, tag := range tags {
-			tagname := "#" + tag.Name
-			item := alfred.
-				NewItem(tagname, "").
-				Opts(
-					alfred.Autocomplete(parse.RawButTag+tagname+" "),
-					alfred.IsValid(false),
-				)
-			a.AddItem(item)
-		}
-
-		fmt.Println(string(a.MustJSON()))
-
-		return
+func erroredToAlfred(err error) bool {
+	if err == nil {
+		return false
 	}
 
-	notes, err := bear.Notes(context.Background(), bearkeek.NotesQuery{
-		Tags:  parse.Tags,
-		Terms: parse.Terms,
-		Limit: 100,
-	})
-	if err != nil {
-		fmt.Println(err)
+	item := alfred.NewItem(err.Error(), "").Opts(alfred.Valid(false))
+	fmt.Println(string(alfred.New().AddItem(item).MustJSON()))
 
-		return
-	}
-
-	for _, note := range notes {
-		a.AddItem(alfred.NewItem(note.Title, note.Subtitle))
-	}
-
-	fmt.Println(string(a.MustJSON()))
+	return true
 }

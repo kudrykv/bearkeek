@@ -142,7 +142,14 @@ func (r dbclient) Note(ctx context.Context, id string) (Note, error) {
 func (r dbclient) Tags(ctx context.Context, q TagsQuery) ([]Tag, error) {
 	var tags []Tag
 
-	res := r.db.WithContext(ctx).Where("ZTITLE like ?", "%"+q.Term+"%").Find(&tags)
+	res := r.db.WithContext(ctx).Table("ZSFNOTETAG").
+		Distinct("ZSFNOTETAG.Z_PK, ZSFNOTETAG.ZTITLE").
+		Joins("join Z_7TAGS on Z_7TAGS.Z_14TAGS = ZSFNOTETAG.Z_PK").
+		Joins("join ZSFNOTE on ZSFNOTE.Z_PK = Z_7TAGS.Z_7NOTES").
+		Where("ZSFNOTE.ZTRASHED = 0 and ZSFNOTE.ZARCHIVED = 0").
+		Where("ZSFNOTETAG.ZTITLE like ?", "%"+q.Term+"%").
+		Find(&tags)
+
 	if res.Error != nil {
 		return nil, fmt.Errorf("find: %w", res.Error)
 	}
