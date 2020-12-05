@@ -62,7 +62,9 @@ func Parse(s string) ParseResult {
 	}
 
 	res.Tags = savetags
-	res.Terms = splitRegex.Split(strings.TrimSpace(s), -1)
+	if len(s) > 0 {
+		res.Terms = splitRegex.Split(strings.TrimSpace(s), -1)
+	}
 
 	return res
 }
