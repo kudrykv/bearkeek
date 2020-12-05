@@ -106,7 +106,7 @@ func notesTags(db *gorm.DB, prep *gorm.DB, q NotesQuery) (*gorm.DB, error) {
 	var noteIDs []int64
 
 	for _, nn := range nat {
-		tl := taglist(strings.Split(nn.Tags, "###"))
+		tl := taglist(strings.Split(strings.ToLower(nn.Tags), "###"))
 		if tl.exact(exclude, true) && tl.exact(include, false) {
 			noteIDs = append(noteIDs, nn.ID)
 		}
@@ -147,7 +147,7 @@ func (r dbclient) Tags(ctx context.Context, q TagsQuery) ([]Tag, error) {
 		Joins("join Z_7TAGS on Z_7TAGS.Z_14TAGS = ZSFNOTETAG.Z_PK").
 		Joins("join ZSFNOTE on ZSFNOTE.Z_PK = Z_7TAGS.Z_7NOTES").
 		Where("ZSFNOTE.ZTRASHED = 0 and ZSFNOTE.ZARCHIVED = 0").
-		Where("ZSFNOTETAG.ZTITLE like ?", "%"+q.Term+"%").
+		Where("utf8lower(ZSFNOTETAG.ZTITLE) like ?", "%"+strings.ToLower(q.Term)+"%").
 		Find(&tags)
 
 	if res.Error != nil {

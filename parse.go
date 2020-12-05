@@ -7,7 +7,7 @@ import (
 
 var (
 	compTagRegex = regexp.MustCompile(`-?#[^\s][^#]+[^\s-]#`)
-	tagRegex     = regexp.MustCompile(`-?#[\w/]+`)
+	tagRegex     = regexp.MustCompile(`-?#[^\s]+`)
 	splitRegex   = regexp.MustCompile(`\s+`)
 )
 
@@ -58,11 +58,11 @@ func Parse(s string) ParseResult {
 			cut = len(tag) - 1
 		}
 
-		savetags = append(savetags, MatchingTag{Name: tag[shift:cut], Exclude: exclude})
+		savetags = append(savetags, MatchingTag{Name: strings.ToLower(tag[shift:cut]), Exclude: exclude})
 	}
 
 	res.Tags = savetags
-	if len(s) > 0 {
+	if len(strings.TrimSpace(s)) > 0 {
 		res.Terms = splitRegex.Split(strings.TrimSpace(s), -1)
 	}
 

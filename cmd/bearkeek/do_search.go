@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/kudrykv/bearkeek"
 	"github.com/kudrykv/bearkeek/alfred"
@@ -52,6 +53,10 @@ func listTags(bear bearkeek.Bear, a *alfred.Alfred, parse bearkeek.ParseResult) 
 
 	for _, tag := range tags {
 		tagname := "#" + tag.Name
+		if strings.Contains(tagname, " ") {
+			tagname += "#"
+		}
+
 		item := alfred.
 			NewItem(tagname, "").
 			Opts(
